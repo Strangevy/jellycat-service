@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.jellycat.api.TMDBApi;
-import com.jellycat.dto.SearchMultiReq;
 
 @RestController
 @RequestMapping("/search")
@@ -15,7 +14,7 @@ public class SearchController {
     private TMDBApi tmdbApi;
 
     @GetMapping("/multi")
-    public Object multi(SearchMultiReq req) {
-        return tmdbApi.searchMulti(req.getQuery());
+    public Object multi(String query) {
+        return tmdbApi.searchMulti(query);
     }
 }
