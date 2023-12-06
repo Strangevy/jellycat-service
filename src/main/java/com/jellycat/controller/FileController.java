@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.jellycat.dto.FileListReq;
 import com.jellycat.service.FileService;
+import com.jellycat.util.ResponseUtils;
 import com.jellycat.vo.FileVo;
+import com.jellycat.vo.ResponseVo;
 
 
 @RestController
@@ -19,8 +21,8 @@ public class FileController {
     private FileService fileService;
     
     @GetMapping("/list/sub")
-    public List<FileVo> listSubByPath(FileListReq req) {
-        return fileService.listSubByPath(req);
+    public ResponseVo<List<FileVo>> listSubByPath(FileListReq req) {
+        return ResponseUtils.success(fileService.listSubByPath(req));
     }
     
 }
