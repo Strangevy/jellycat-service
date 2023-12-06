@@ -13,4 +13,8 @@ public class JsonUtils {
     public static String writeObject(Object object) throws JsonProcessingException {
         return objectMapper.writeValueAsString(object);
     }
+
+    public static String writeObjectByFormat(Object object) throws JsonProcessingException {
+        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+    }
 }

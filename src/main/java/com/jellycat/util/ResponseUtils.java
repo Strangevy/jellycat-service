@@ -23,8 +23,8 @@ public class ResponseUtils {
         return new ResponseVo<T>(FAIL, FAIL_MSG, null);
     }
 
-    public static <T> ResponseVo<T> fail(T data) {
-        return new ResponseVo<T>(FAIL, FAIL_MSG, data);
+    public static <T> ResponseVo<T> fail(String msg) {
+        return new ResponseVo<T>(FAIL, msg, null);
     }
 
     public static <T> ResponseVo<T> build(int status, String msg, T data) {

@@ -3,7 +3,6 @@ package com.jellycat.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,6 +12,7 @@ import org.springframework.util.StringUtils;
 
 import com.jellycat.dto.FileListReq;
 import com.jellycat.dto.SystemConfig;
+import com.jellycat.util.ExceptionUtils;
 import com.jellycat.vo.FileVo;
 
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +30,10 @@ public class FileService {
                     .map(FileVo::new)
                     .collect(Collectors.toList());
         } catch (IOException e) {
-            log.error("show sub list error", e);
+            String msg = "show sub list error";
+            log.error(msg, e);
+            throw ExceptionUtils.buildException(msg);
         }
-        return Collections.emptyList();
     }
 
 }
