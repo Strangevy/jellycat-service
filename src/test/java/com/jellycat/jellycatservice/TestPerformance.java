@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 public class TestPerformance {
 
     @Test
-    void testPerformance(String[] args) throws IOException {
+    void testPerformance() throws IOException {
         // 创建测试数据
         Path targetPath = Files.createTempDirectory("test");
         Path linkPath = Files.createFile(targetPath.resolve("link.txt"));
@@ -37,7 +37,6 @@ public class TestPerformance {
                 try {
                     Files.isSameFile(linkPath, hardLink1);
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
@@ -54,7 +53,6 @@ public class TestPerformance {
                 try {
                     Files.getAttribute(linkPath, "unix:ino");
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
