@@ -39,25 +39,18 @@ public class FileService {
     public void delFileAndLink(String path) {
         Path sourcePath = Paths.get(path);
         Path targetPath = Paths.get(systemConfig.getTargetPath());
-
-        // get source file inode
-        long inode;
-        try {
-            inode = (long) Files.getAttribute(sourcePath, "unix:ino");
-        } catch (IOException e) {
-            throw ExceptionUtils.buildException(log, e, "get file inode error");
-        }
-
         // Traversing and deleting all hard links in target
-        try (Stream<Path> links = Files.walk(targetPath)) {
-            links.forEach(link -> {
-                log.info(link.getFileName().toString());
+        try {
+            Files.walk(targetPath).filter(Files::isRegularFile).filter(link -> {
                 try {
-                    long linkInode = (long) Files.getAttribute(link, "unix:ino");
-                    // Compare inodes, delete if identical
-                    if (inode == linkInode) {
-                        Files.deleteIfExists(link);
-                    }
+                    // Compare file, delete if some
+                    return Files.isSameFile(sourcePath, link);
+                } catch (IOException e) {
+                    throw ExceptionUtils.buildException(log, e, "compare file error");
+                }
+            }).forEach(t -> {
+                try {
+                    Files.deleteIfExists(t);
                 } catch (IOException e) {
                     throw ExceptionUtils.buildException(log, e, "delete link error");
                 }
@@ -65,6 +58,7 @@ public class FileService {
         } catch (IOException e) {
             throw ExceptionUtils.buildException(log, e, "file walk error");
         }
+
         // delete source file
         try {
             Files.deleteIfExists(sourcePath);
