@@ -1,7 +1,8 @@
 package com.jellycat.jellycatservice;
 
 import java.util.Arrays;
-import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,19 +28,35 @@ public class PreprocessMediaFileNameTest {
     }
 
     // A method to preprocess the media file name
-  static void preprocessMediaFileName(String mediaFileName) {
-    String[] separators = { "\\.", "_", "-", "\\s" };
+    static void preprocessMediaFileName(String mediaFileName) {
 
-    for (String separator : separators) {
-      String processedMediaFileName = Arrays.stream(mediaFileName.split(separator))
-          .takeWhile(part -> !part.matches("\\d{4}"))
-          .map(part -> part.replaceAll("[［］\\[\\]\\(\\)]", "")) // remove brackets
-          .collect(Collectors.joining(" "));
 
-      if (!processedMediaFileName.trim().isEmpty()) {
-        System.out.println("Processed media file name: " + processedMediaFileName.trim());
-        break;
-      }
+        // 使用Optional来处理可能为空的情况，避免空指针异常
+        Optional<String> processedMediaFileName = Optional.ofNullable(mediaFileName)
+                // 去除括号
+                .map(name -> bracketPattern.matcher(name).replaceAll(""))
+                // 分割文件名
+                .map(name -> separatorPattern.split(name))
+                .map(parts -> {
+                    // 找到年份部分的索引，使用takeWhile方法
+                    int index = Arrays.stream(parts).takeWhile(part -> !yearPattern.matcher(part).matches())
+                            .count() < parts.length
+                                    ? (int) Arrays.stream(parts).takeWhile(part -> !yearPattern.matcher(part).matches())
+                                            .count()
+                                    : -1;
+                    // 获取第一个分辨率部分，使用findFirst方法
+                    String resolution = Arrays.stream(parts).filter(part -> resolutionPattern.matcher(part).matches())
+                            .findFirst().orElse("");
+                    // 获取处理后的文件名部分，使用trim和replaceAll方法
+                    String name = String.join(" ", index == -1 ? parts : Arrays.copyOfRange(parts, 0, index)).trim()
+                            .replaceAll("\\s+", " ");
+                    // 返回处理后的文件名，年份，和分辨率
+                    return "Processed media file name: " + name + ", Year: " + (index == -1 ? "" : parts[index])
+                            + ", Resolution: "
+                            + resolution;
+                });
+        // 使用orElse方法提供一个默认值，如果处理后的文件名为空
+        System.out.println(processedMediaFileName.orElse("Invalid media file name"));
     }
-  }
+
 }
