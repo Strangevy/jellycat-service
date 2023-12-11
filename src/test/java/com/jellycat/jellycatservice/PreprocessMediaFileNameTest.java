@@ -7,6 +7,17 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 public class PreprocessMediaFileNameTest {
+    private static final String SEPARATOR_REGEX = "[\\.\\-_\\s]";
+    private static final String YEAR_REGEX = "\\d{4}";
+    private static final String RESOLUTION_REGEX = "\\d{3,4}p";
+    private static final String BRACKET_REGEX = "\\(|\\)|【|】|［|］|\\[|\\]";
+
+    private static final Pattern separatorPattern = Pattern.compile(SEPARATOR_REGEX);
+    private static final Pattern yearPattern = Pattern.compile(YEAR_REGEX);
+    private static final Pattern resolutionPattern = Pattern.compile(RESOLUTION_REGEX);
+    private static final Pattern bracketPattern = Pattern.compile(BRACKET_REGEX);
+
+
     @Test
     void test() {
         Arrays.asList("［万里归途］.Home.Coming.2022.2160p.WEB-DL.HEVC.DDP5.1-QHstudlo.mp4",
