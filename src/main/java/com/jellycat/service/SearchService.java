@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import com.jellycat.api.TMDBApi;
-import com.jellycat.dto.SearchResp;
+import com.jellycat.dto.TMDBSearchResp;
 import com.jellycat.dto.SearchResult;
 import com.jellycat.vo.SearchVo;
 
@@ -19,7 +19,7 @@ public class SearchService {
     private TMDBApi tmdbApi;
 
     public List<SearchVo> multi(String query) {
-        SearchResp searchMultiResp = tmdbApi.searchMulti(query);
+        TMDBSearchResp searchMultiResp = tmdbApi.searchMulti(query);
         List<SearchResult> results = searchMultiResp.results();
         if (CollectionUtils.isEmpty(results)) {
             return Collections.emptyList();
