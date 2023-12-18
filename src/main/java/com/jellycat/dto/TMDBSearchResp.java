@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record TMDBSearchResp(
         int page,
-        List<SearchResult> results,
+        List<TMDBSearchResult> results,
         int totalPages,
         int totalResults) {
 

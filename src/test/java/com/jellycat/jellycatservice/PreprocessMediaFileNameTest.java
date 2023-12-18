@@ -2,6 +2,7 @@ package com.jellycat.jellycatservice;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
@@ -14,11 +15,15 @@ public class PreprocessMediaFileNameTest {
         private static final String YEAR_REGEX = "\\d{4}";
         private static final String RESOLUTION_REGEX = "\\d{3,4}p";
         private static final String BRACKET_REGEX = "\\(|\\)|【|】|［|］|\\[|\\]|\\.[^.]*$";
+        private static final String SEASON_REGEX = "S(\\d+)";
+        private static final String EPISODE_REGEX = "(Ep|E)(\\d+)";
 
         private static final Pattern separatorPattern = Pattern.compile(SEPARATOR_REGEX);
         private static final Pattern yearPattern = Pattern.compile(YEAR_REGEX);
         private static final Pattern resolutionPattern = Pattern.compile(RESOLUTION_REGEX);
         private static final Pattern bracketPattern = Pattern.compile(BRACKET_REGEX);
+        private static final Pattern seasonPattern = Pattern.compile(SEASON_REGEX);
+        private static final Pattern episodePattern = Pattern.compile(EPISODE_REGEX);
 
         @Test
         void test() {
@@ -35,6 +40,10 @@ public class PreprocessMediaFileNameTest {
                                 "The.Secret.Life.of.Walter.Mitty.2013.BluRay.1080p.DTS-HD.MA.7.1.x265.10bit-BeiTai The.Sparring.Partner.2022.1080p.BluRay.x265.10bit-WiKi.mp4",
                                 "东北告别天团.Goodbye.2022.2160p.WEB-DL.H265.AAC-LeagueWEB.mp4",
                                 "东北告别天团.mp4",
+                                "Jade.The QUEEN Of News.Ep19.HDTV.1080p.H264-CNHK.ts",
+                                "追光的日子.CCTV4K.Ray.of.Light.2023.E01.2160p.UHDTV.H265.AC3-HaresTV.ts",
+                                "WATCHER.S01E01.2160p.TVING.WEB-DL.AAC2.0.H.265-CHDWEB.mkv",
+                                "我可能遇到了救星.Hi.Venus.第一季第一集.2022.2160p.WEB-DL.H265.AAC-ADWeb.mp4",
                                 "满江红.Full.River.Red.2023.60FPS.2160p.WEB-DL.H265.10bit.DTS.5.1-OurTV.mp4",
                                 "神出鬼没.Ghosted.2023.ATVP.WEB-DL.2160p.HEVC.HDR.DV.Atmos.DDP5.1-HDSWEB.mp4 ")
                                 .stream().map(PreprocessMediaFileNameTest::preprocessMediaFileName)
@@ -43,7 +52,7 @@ public class PreprocessMediaFileNameTest {
         }
 
         // A method to preprocess the media file name
-        static Optional<MedieFileRecord> preprocessMediaFileName(final String mediaFileName) {
+        public static Optional<MedieFileRecord> preprocessMediaFileName(final String mediaFileName) {
                 // 使用Optional来处理可能为空的情况，避免空指针异常
                 return Optional.ofNullable(mediaFileName)
                                 // 去除括号和后缀
@@ -61,12 +70,33 @@ public class PreprocessMediaFileNameTest {
                                                         .filter(part -> resolutionPattern.matcher(part).matches())
                                                         .findFirst().orElse("");
                                         // 获取处理后的文件名部分，使用join和trim方法
-                                        String name = String.join(" ",
-                                                        index.filter(i -> i > 0).map(i -> Arrays.copyOfRange(parts, 0, i)).orElse(parts))
+                                        String name = String.join(" ", index.filter(i -> i > 0)
+                                                        .map(i -> Arrays.copyOfRange(parts, 0, i))
+                                                        .orElse(parts))
                                                         .trim();
+
+                                        // Extract season number
+
+                                        Optional<Integer> seasonNumber = Arrays.stream(parts)
+                                                        .map(part -> seasonPattern.matcher(part))
+                                                        .filter(Matcher::find)
+                                                        .map(e -> e.group(1))
+                                                        .map(Integer::valueOf)
+                                                        .findFirst();
+
+                                        // Extract episode number
+
+                                        Optional<Integer> episodeNumber = Arrays.stream(parts)
+                                                        .map(part -> episodePattern.matcher(part))
+                                                        .filter(Matcher::find)
+                                                        .map(e -> e.group(2))
+                                                        .map(Integer::valueOf)
+                                                        .findFirst();
+
                                         // 返回处理后的文件名，年份，和分辨率，使用ofNullable方法
                                         return Optional.ofNullable(new MedieFileRecord(name,
-                                                        index.map(i -> parts[i]).orElse(null), resolution));
+                                                        index.map(i -> parts[i]).orElse(null), resolution, seasonNumber,
+                                                        episodeNumber));
                                 });
         }
 

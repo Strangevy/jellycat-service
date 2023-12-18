@@ -1,5 +1,7 @@
 package com.jellycat.dto;
 
-public record MedieFileRecord(String name, String year, String resolution) {
+import java.util.Optional;
+
+public record MedieFileRecord(String name, String year, String resolution, Optional<Integer> season, Optional<Integer> episode) {
 
 }

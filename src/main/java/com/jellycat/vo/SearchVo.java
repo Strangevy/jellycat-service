@@ -2,7 +2,7 @@ package com.jellycat.vo;
 
 import java.util.List;
 
-import com.jellycat.dto.SearchResult;
+import com.jellycat.dto.TMDBSearchResult;
 
 public record SearchVo(
         Boolean adult,
@@ -20,7 +20,7 @@ public record SearchVo(
         String voteAverage,
         Integer voteCount,
         List<String> originCountry) {
-    public SearchVo(SearchResult searchResult) {
+    public SearchVo(TMDBSearchResult searchResult) {
         this(
                 searchResult.adult(),
                 searchResult.backdropPath(),

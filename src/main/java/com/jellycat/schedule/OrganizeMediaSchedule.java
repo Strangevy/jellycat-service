@@ -1,11 +1,15 @@
 package com.jellycat.schedule;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -14,12 +18,14 @@ import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.jellycat.api.TMDBApi;
 import com.jellycat.dto.MedieFileRecord;
-import com.jellycat.dto.TMDBSearchResp;
 import com.jellycat.dto.SystemConfig;
+import com.jellycat.dto.TMDBSearchResp;
+import com.jellycat.dto.TMDBSearchResult;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,11 +36,15 @@ public class OrganizeMediaSchedule {
         private static final String YEAR_REGEX = "\\d{4}";
         private static final String RESOLUTION_REGEX = "\\d{3,4}p";
         private static final String BRACKET_REGEX = "\\(|\\)|【|】|［|］|\\[|\\]|\\.[^.]*$";
+        private static final String SEASON_REGEX = "S(\\d+)";
+        private static final String EPISODE_REGEX = "(Ep|E)(\\d+)";
 
         private static final Pattern separatorPattern = Pattern.compile(SEPARATOR_REGEX);
         private static final Pattern yearPattern = Pattern.compile(YEAR_REGEX);
         private static final Pattern resolutionPattern = Pattern.compile(RESOLUTION_REGEX);
         private static final Pattern bracketPattern = Pattern.compile(BRACKET_REGEX);
+        private static final Pattern seasonPattern = Pattern.compile(SEASON_REGEX);
+        private static final Pattern episodePattern = Pattern.compile(EPISODE_REGEX);
 
         // The media file extensions to filter
         private static final List<String> MEDIA_FILE_EXTENSIONS = Arrays.asList(".mp4", ".mkv", ".avi", ".mov", ".wmv");
@@ -53,55 +63,47 @@ public class OrganizeMediaSchedule {
                 // traverse the source directory to identify unorganized media
                 try (Stream<Path> paths = Files.walk(Paths.get(sourcePath))) {
                         // Filter the media files that are larger than the threshold
-                        List<File> mediaFiles = paths
-                                        .filter(Files::isRegularFile)
+                        paths.filter(Files::isRegularFile)
                                         .map(Path::toFile)
-                                        .filter(file -> isMediaFile(file) && file.length() > MEDIA_FILE_SIZE_THRESHOLD)
-                                        .filter(file->{
-
-                                        // preprocess media file name
-                                                Optional<MedieFileRecord> medieFileRecord = preprocessMediaFileName(file.getName());
-                                                if(!medieFileRecord.isPresent()){
-                                                        return false;
+                                        .filter(file -> isMediaFile(file) && file.length() > MEDIA_FILE_SIZE_THRESHOLD
+                                                        && isNotModifiedInLastMinute(file))
+                                        .forEach(file -> {
+                                                // preprocess media file name
+                                                Optional<MedieFileRecord> medieFileRecord = preprocessMediaFileName(
+                                                                file.getName());
+                                                if (!medieFileRecord.isPresent()) {
+                                                        return;
                                                 }
-                                        // search media with TMDB API
-                                        TMDBSearchResp tmdbResp = tmdbApi.searchMulti(medieFileRecord.get().name());
-                                        Optional.ofNullable(tmdbResp).map(resp->resp.results()).map(results->results.stream().filter(e->{
-                                                if(StringUtils.hasText(medieFileRecord.get().year())){
-                                                        
+                                                // search media with TMDB API
+                                                TMDBSearchResp tmdbResp = tmdbApi
+                                                                .searchMulti(medieFileRecord.get().name());
 
-                                                }else{
-                                                        return true;
+                                                if (Objects.isNull(tmdbResp)
+                                                                || CollectionUtils.isEmpty(tmdbResp.results())) {
+                                                        return;
                                                 }
-                                        }))
+                                                TMDBSearchResult result;
+                                                if (StringUtils.hasText(medieFileRecord.get().year())) {
+                                                        result = tmdbResp.results().stream().takeWhile(e -> {
+                                                                return medieFileRecord.get().year().equals(
+                                                                                e.firstAirDate().substring(0, 4));
+                                                        }).findFirst().orElse(null);
+                                                } else {
+                                                        result = tmdbResp.results().getFirst();
+                                                }
+                                                // create target directory
+                                                // Paths.get(systemConfig.getTargetPath()+"/"+result.mediaType()+"/"+);
+                                                // move or create link media to target directory
+                                                // move or create link TODO
+                                                if (true) {
 
-                                                return false;
-                                        })
-                                        .map(file->{
+                                                        return;
+                                                }
+                                                return;
+                                        });
 
-
-
-
-
-                                        return file;
-                                        }).toList();
-
-
-                        // Print the media files and their TMDB information
-                        for (File mediaFile : mediaFiles) {
-                                System.out.println("Media file: " + mediaFile.getName());
-                                System.out.println("Size: " + mediaFile.length() + " bytes");
-                                System.out.println("TMDB information: ");
-                                printTMDBInfo(mediaFile);
-                                System.out.println();
-                        }
                 } catch (IOException e) {
-                        e.printStackTrace();
                 }
-
-
-
-                // move or create link media to target directory
 
                 log.info("end task: organizeMedia");
         }
@@ -115,6 +117,17 @@ public class OrganizeMediaSchedule {
                         }
                 }
                 return false;
+        }
+
+        // Check if a file is not modified in the last minute
+        private static boolean isNotModifiedInLastMinute(File file) {
+                // Get the current time and the file's last modified time as Instant objects
+                Instant currentTime = Instant.now();
+                Instant fileTime = Instant.ofEpochMilli(file.lastModified());
+
+                // Check if the file's last modified time is before the current time minus one
+                // minute
+                return fileTime.isBefore(currentTime.minus(1, ChronoUnit.MINUTES));
         }
 
         public static Optional<MedieFileRecord> preprocessMediaFileName(final String mediaFileName) {
@@ -140,9 +153,23 @@ public class OrganizeMediaSchedule {
                                                                         .map(i -> Arrays.copyOfRange(parts, 0, i))
                                                                         .orElse(parts))
                                                         .trim();
+
+                                        // Extract episode number
+                                        Optional<Integer> seasonNumber = IntStream.range(0, parts.length)
+                                                        .filter(i -> seasonPattern.matcher(parts[i]).matches())
+                                                        .boxed()
+                                                        .findFirst();
+
+                                        // Extract season number 
+                                        Optional<Integer> episodeNumber = IntStream.range(0, parts.length)
+                                                        .filter(i -> episodePattern.matcher(parts[i]).matches())
+                                                        .boxed()
+                                                        .findFirst();
+
                                         // 返回处理后的文件名，年份，和分辨率，使用ofNullable方法
                                         return Optional.ofNullable(new MedieFileRecord(name,
-                                                        index.map(i -> parts[i]).orElse(null), resolution));
+                                                        index.map(i -> parts[i]).orElse(null), resolution, seasonNumber,
+                                                        episodeNumber));
                                 });
         }
 
