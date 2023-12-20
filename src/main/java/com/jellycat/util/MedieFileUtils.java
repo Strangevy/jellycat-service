@@ -15,8 +15,7 @@ public class MedieFileUtils {
     private static final Pattern RESOLUTION_PATTERN = Pattern.compile("(\\d+p)");
     private static final Pattern SEASON_PATTERN = Pattern.compile("S(\\d{1,2})");
     private static final Pattern EPISODE_PATTERN = Pattern.compile("E[p]?(\\d{1,2})");
-    private static final Pattern CLEAN_FILENAME_PATTERN = Pattern
-            .compile("^(.*?)(\\d{4}|S\\d{1,2}E\\d{1,2}|Ep\\d{1,2}).*");
+    private static final Pattern CLEAN_FILENAME_PATTERN = Pattern.compile("^(.*?)(\\d{4}|S\\d{1,2}E\\d{1,2}|Ep\\d{1,2}).*");
 
     public static void main(String[] args) {
         List<String> filenames = Arrays.asList(
@@ -48,9 +47,14 @@ public class MedieFileUtils {
     }
 
     public static MedieFileRecord cleanFilename(String filename) {
-        String modifiedFilename = filename.substring(0, filename.lastIndexOf('.')); // Use a temporary variable
-        String year = extractInfo(modifiedFilename, YEAR_PATTERN).orElse(null);
-        String resolution = extractInfo(modifiedFilename, RESOLUTION_PATTERN).orElse(null);
+        String modifiedFilename = filename;
+        // Extract extension and remove it from the modifiedFilename
+        int dotIndex = modifiedFilename.lastIndexOf('.');
+        String fileExtension = (dotIndex == -1) ? "" : modifiedFilename.substring(dotIndex + 1);
+        modifiedFilename = modifiedFilename.substring(0, dotIndex);
+
+        Optional<String> year = extractInfo(modifiedFilename, YEAR_PATTERN).map(String::trim);
+        String resolution = extractInfo(modifiedFilename, RESOLUTION_PATTERN).map(String::trim).orElse(null);
         Optional<Integer> season = extractInfo(modifiedFilename, SEASON_PATTERN).map(Integer::parseInt);
         Optional<Integer> episode = extractInfo(modifiedFilename, EPISODE_PATTERN).map(Integer::parseInt);
 
@@ -60,7 +64,7 @@ public class MedieFileUtils {
         }
 
         modifiedFilename = String.join(" ", modifiedFilename.replaceAll("[\\p{P}\\s]+", " ").trim());
-        return new MedieFileRecord(modifiedFilename, year, resolution, season, episode);
+        return new MedieFileRecord(modifiedFilename, year.orElse(null), resolution, season, episode, fileExtension);
     }
 
     private static Optional<String> extractInfo(String filename, Pattern pattern) {

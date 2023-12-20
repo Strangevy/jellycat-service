@@ -24,6 +24,7 @@ import com.jellycat.dto.MedieFileRecord;
 import com.jellycat.dto.SystemConfig;
 import com.jellycat.dto.TMDBSearchResp;
 import com.jellycat.dto.TMDBSearchResult;
+import com.jellycat.util.ExceptionUtils;
 import com.jellycat.util.MedieFileUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -31,25 +32,15 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class OrganizeMediaSchedule {
-        private static final String SEPARATOR_REGEX = "[\\.\\-_\\s]";
-        private static final String YEAR_REGEX = "\\d{4}";
-        private static final String RESOLUTION_REGEX = "\\d{3,4}p";
-        private static final String BRACKET_REGEX = "\\(|\\)|【|】|［|］|\\[|\\]|\\.[^.]*$";
-        private static final String SEASON_REGEX = "S(\\d+)";
-        private static final String EPISODE_REGEX = "(Ep|E)(\\d+)";
-
-        private static final Pattern separatorPattern = Pattern.compile(SEPARATOR_REGEX);
-        private static final Pattern yearPattern = Pattern.compile(YEAR_REGEX);
-        private static final Pattern resolutionPattern = Pattern.compile(RESOLUTION_REGEX);
-        private static final Pattern bracketPattern = Pattern.compile(BRACKET_REGEX);
-        private static final Pattern seasonPattern = Pattern.compile(SEASON_REGEX);
-        private static final Pattern episodePattern = Pattern.compile(EPISODE_REGEX);
-
         // The media file extensions to filter
         private static final List<String> MEDIA_FILE_EXTENSIONS = Arrays.asList(".mp4", ".mkv", ".avi", ".mov", ".wmv");
 
         // The media file size threshold in bytes
         private static final long MEDIA_FILE_SIZE_THRESHOLD = 256 * 1024 * 1024;
+
+        private static final String MOVIE_NAME_STANDARD = "%s (%d).%s";
+        private static final String TV_NAME_STANDARD = "%s - S%02dE%02d - %s.%s";
+
         @Autowired
         private SystemConfig systemConfig;
         @Autowired
@@ -68,22 +59,25 @@ public class OrganizeMediaSchedule {
                                                         && isNotModifiedInLastMinute(file))
                                         .forEach(file -> {
                                                 // preprocess media file name
-                                                MedieFileRecord medieFileRecord = MedieFileUtils.cleanFilename(
-                                                                file.getName());
+                                                MedieFileRecord medieFileRecord = MedieFileUtils
+                                                                .cleanFilename(file.getName());
                                                 // search media with TMDB API
                                                 TMDBSearchResp tmdbResp;
+                                                String seasonPath = "";
                                                 if (medieFileRecord.episode().isPresent()) {
                                                         // tv
                                                         tmdbResp = tmdbApi.searchTV(medieFileRecord.name());
-
+                                                        seasonPath = "/S" + medieFileRecord.season();
                                                 } else {
                                                         // movie
                                                         tmdbResp = tmdbApi.searchMovie(medieFileRecord.name());
                                                 }
 
-                                                if (Objects.isNull(tmdbResp)|| CollectionUtils.isEmpty(tmdbResp.results())) {
+                                                if (Objects.isNull(tmdbResp)
+                                                                || CollectionUtils.isEmpty(tmdbResp.results())) {
                                                         return;
                                                 }
+                                                // match
                                                 TMDBSearchResult result;
                                                 if (StringUtils.hasText(medieFileRecord.year())) {
                                                         result = tmdbResp.results().stream().takeWhile(e -> {
@@ -94,10 +88,28 @@ public class OrganizeMediaSchedule {
                                                         result = tmdbResp.results().getFirst();
                                                 }
                                                 // create target directory
-                                                // Paths.get(systemConfig.getTargetPath()+"/"+result.mediaType()+"/"+);
+                                                Path targetPath = Paths.get(systemConfig.getTargetPath() + "/"
+                                                                + (medieFileRecord.episode().isPresent() ? "tv"
+                                                                                : "movie")
+                                                                + "/" + result.name()
+                                                                + seasonPath);
+                                                File targetFile = targetPath.toFile();
+                                                if (!targetFile.exists()) {
+                                                        targetFile.mkdirs();
+                                                }
                                                 // move or create link media to target directory
-                                                // move or create link TODO
-                                                if (true) {
+
+                                                // move flag TODO
+                                                boolean moveFlag = true;
+                                                if (moveFlag) {
+                                                        try {
+                                                                Files.move(file.toPath(),
+                                                                                Paths.get(targetPath.toString() + "/"
+                                                                                                + ""));
+                                                        } catch (IOException e) {
+                                                                throw ExceptionUtils.buildException(log, e,
+                                                                                "show sub list error");
+                                                        }
 
                                                         return;
                                                 }
