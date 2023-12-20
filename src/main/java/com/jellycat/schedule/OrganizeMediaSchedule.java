@@ -10,9 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +24,7 @@ import com.jellycat.dto.MedieFileRecord;
 import com.jellycat.dto.SystemConfig;
 import com.jellycat.dto.TMDBSearchResp;
 import com.jellycat.dto.TMDBSearchResult;
+import com.jellycat.util.MedieFileUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,23 +68,26 @@ public class OrganizeMediaSchedule {
                                                         && isNotModifiedInLastMinute(file))
                                         .forEach(file -> {
                                                 // preprocess media file name
-                                                Optional<MedieFileRecord> medieFileRecord = preprocessMediaFileName(
+                                                MedieFileRecord medieFileRecord = MedieFileUtils.cleanFilename(
                                                                 file.getName());
-                                                if (!medieFileRecord.isPresent()) {
-                                                        return;
-                                                }
                                                 // search media with TMDB API
-                                                TMDBSearchResp tmdbResp = tmdbApi
-                                                                .searchMulti(medieFileRecord.get().name());
+                                                TMDBSearchResp tmdbResp;
+                                                if (medieFileRecord.episode().isPresent()) {
+                                                        // tv
+                                                        tmdbResp = tmdbApi.searchTV(medieFileRecord.name());
 
-                                                if (Objects.isNull(tmdbResp)
-                                                                || CollectionUtils.isEmpty(tmdbResp.results())) {
+                                                } else {
+                                                        // movie
+                                                        tmdbResp = tmdbApi.searchMovie(medieFileRecord.name());
+                                                }
+
+                                                if (Objects.isNull(tmdbResp)|| CollectionUtils.isEmpty(tmdbResp.results())) {
                                                         return;
                                                 }
                                                 TMDBSearchResult result;
-                                                if (StringUtils.hasText(medieFileRecord.get().year())) {
+                                                if (StringUtils.hasText(medieFileRecord.year())) {
                                                         result = tmdbResp.results().stream().takeWhile(e -> {
-                                                                return medieFileRecord.get().year().equals(
+                                                                return medieFileRecord.year().equals(
                                                                                 e.firstAirDate().substring(0, 4));
                                                         }).findFirst().orElse(null);
                                                 } else {
@@ -129,48 +131,4 @@ public class OrganizeMediaSchedule {
                 // minute
                 return fileTime.isBefore(currentTime.minus(1, ChronoUnit.MINUTES));
         }
-
-        public static Optional<MedieFileRecord> preprocessMediaFileName(final String mediaFileName) {
-                // 使用Optional来处理可能为空的情况，避免空指针异常
-                return Optional.ofNullable(mediaFileName)
-                                // 去除括号和后缀
-                                .map(name -> bracketPattern.matcher(name).replaceAll(""))
-                                // 分割文件名
-                                .map(name -> separatorPattern.split(name))
-                                .flatMap(parts -> {
-                                        // 找到年份部分的索引，使用filter和findFirst方法
-                                        Optional<Integer> index = IntStream.range(0, parts.length)
-                                                        .filter(i -> yearPattern.matcher(parts[i]).matches())
-                                                        .boxed()
-                                                        .findFirst();
-                                        // 获取第一个分辨率部分，使用findFirst方法
-                                        String resolution = Arrays.stream(parts)
-                                                        .filter(part -> resolutionPattern.matcher(part).matches())
-                                                        .findFirst().orElse("");
-                                        // 获取处理后的文件名部分，使用join和trim方法
-                                        String name = String.join(" ",
-                                                        index.filter(i -> i > 0)
-                                                                        .map(i -> Arrays.copyOfRange(parts, 0, i))
-                                                                        .orElse(parts))
-                                                        .trim();
-
-                                        // Extract episode number
-                                        Optional<Integer> seasonNumber = IntStream.range(0, parts.length)
-                                                        .filter(i -> seasonPattern.matcher(parts[i]).matches())
-                                                        .boxed()
-                                                        .findFirst();
-
-                                        // Extract season number 
-                                        Optional<Integer> episodeNumber = IntStream.range(0, parts.length)
-                                                        .filter(i -> episodePattern.matcher(parts[i]).matches())
-                                                        .boxed()
-                                                        .findFirst();
-
-                                        // 返回处理后的文件名，年份，和分辨率，使用ofNullable方法
-                                        return Optional.ofNullable(new MedieFileRecord(name,
-                                                        index.map(i -> parts[i]).orElse(null), resolution, seasonNumber,
-                                                        episodeNumber));
-                                });
-        }
-
 }
