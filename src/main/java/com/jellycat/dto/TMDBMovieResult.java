@@ -6,20 +6,19 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record TMDBSearchResult(
-        Boolean adult,
+public record TMDBMovieResult(
+        boolean adult,
         String backdropPath,
-        Long id,
-        String name,
+        List<Integer> genreIds,
+        int id,
         String originalLanguage,
-        String originalName,
+        String originalTitle,
         String overview,
+        double popularity,
         String posterPath,
-        String mediaType,
-        List<Long> genreIds,
-        String popularity,
-        String firstAirDate,
-        String voteAverage,
-        Integer voteCount,
-        List<String> originCountry) {
+        String releaseDate,
+        String title,
+        boolean video,
+        double voteAverage,
+        int voteCount) {
 }

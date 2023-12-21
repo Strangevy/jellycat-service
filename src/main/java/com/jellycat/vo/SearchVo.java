@@ -2,25 +2,25 @@ package com.jellycat.vo;
 
 import java.util.List;
 
-import com.jellycat.dto.TMDBSearchResult;
+import com.jellycat.dto.TMDBMulitResult;
 
 public record SearchVo(
-        Boolean adult,
+        boolean adult,
         String backdropPath,
-        Long id,
+        int id,
         String name,
         String originalLanguage,
         String originalName,
         String overview,
         String posterPath,
         String mediaType,
-        List<Long> genreIds,
-        String popularity,
+        List<Integer> genreIds,
+        double popularity,
         String firstAirDate,
         String voteAverage,
         Integer voteCount,
-        List<String> originCountry) {
-    public SearchVo(TMDBSearchResult searchResult) {
+        List<String> originCountr) {
+    public SearchVo(TMDBMulitResult searchResult) {
         this(
                 searchResult.adult(),
                 searchResult.backdropPath(),
